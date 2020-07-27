@@ -1,0 +1,83 @@
+@model Chat
+
+<div class="chat-body">
+    @foreach(var message in Model.Messages)
+    {
+        <div class="message">
+            <strong>@message.Name</strong>
+            <p>@message.Text</p>
+            <small>@message.Timestamp.ToLocalTime().ToString("dd/MM/yyyy hh:mm:ss")</small>
+        </div>
+    }
+</div>
+<form class="chat-input" onsubmit="sendMessage(event)" asp-controller="Home" asp-action="CreateMessage">
+    <input type="hidden" name="roomId" value="@Model.Id">
+    <input type="text" name="message" id="message-input">
+    <button type="submit">Send</button>
+</form>
+
+@section scripts {
+    <script src="~/js/signalr.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .build();
+
+        var connectionId = '';
+
+        connection.on("ReceiveMessage", data => {
+
+            var message = document.createElement("div");
+            message.classList.add('message');
+
+            var strong = document.createElement("strong");
+            strong.appendChild(document.createTextNode(data.name));
+
+            var p = document.createElement("p");
+            p.appendChild(document.createTextNode(data.text));
+
+            var small = document.createElement("small");
+            small.appendChild(document.createTextNode(data.timestamp));
+
+
+            message.appendChild(strong);
+            message.appendChild(p);
+            message.appendChild(small);
+
+            document.querySelector('.chat-body').append(message);
+        });
+
+        const joinRoom = async () => {
+            try{
+                const url = `/Chat/JoinRoom/${connectionId}/@Model.Id`;
+                const response = await axios.post(url, null);
+            } catch (err) {
+                console.log("Failled to join Room!", err);
+            }
+        }
+
+
+        connection.start().then(async() =>{
+           const _connectionId = await connection.invoke('getConnectionId');
+            connectionId = _connectionId;
+            joinRoom();
+        })
+        .catch(err => {
+            console.log(err);
+        });
+
+        const sendMessage = async (event) => {
+            event.preventDefault();
+
+            const data = new FormData(event.target);
+            document.getElementById('message-input').value = '';
+
+            try{
+                await axios.post('/Chat/SendMessage', data);
+            } catch(err){
+                console.log("Failed to sent message", err);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,10 @@
+﻿@model IEnumerable<Chat>
+@{ViewData["Title"] = "Home Page";}
+
+@foreach (var chat in Model)
+{
+    <a class="btn btn-light" asp-controller="Home" asp-action="JoinRoom" asp-route-id="@chat.Id">
+        @chat.Name
+    </a>
+}
+
